@@ -1,23 +1,40 @@
+"""Main entry point for the refactoring swarm system."""
+
 import argparse
 import sys
-import os
-from dotenv import load_dotenv
-from src.utils.logger import log_experiment
 
-load_dotenv()
+from src.orchestrator import Orchestrator
+
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--target_dir", type=str, required=True)
+    """Parse arguments and initiate orchestration."""
+    parser = argparse.ArgumentParser(
+        description="Refactoring Swarm - Multi-agent code refactoring system",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--target_dir",
+        type=str,
+        required=True,
+        help="Target directory for refactoring analysis",
+    )
     args = parser.parse_args()
 
-    if not os.path.exists(args.target_dir):
-        print(f"❌ Dossier {args.target_dir} introuvable.")
+    try:
+        orchestrator = Orchestrator(target_dir=args.target_dir)
+        result = orchestrator.run()
+        
+        print(f"Orchestration started for {args.target_dir}")
+        print(f"Status: {result['status']}")
+        print(f"Files discovered: {result['files_found']}")
+        
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"🚀 DEMARRAGE SUR : {args.target_dir}")
-    log_experiment("System", "STARTUP", f"Target: {args.target_dir}", "INFO")
-    print("✅ MISSION_COMPLETE")
 
 if __name__ == "__main__":
     main()
