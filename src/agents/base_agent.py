@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict
 
-from google import genai
+from mistralai import Mistral
 from dotenv import load_dotenv
 
 from src.utils.logger import ActionType, log_experiment
@@ -17,15 +17,15 @@ from src.utils.logger import ActionType, log_experiment
 load_dotenv()
 
 # Get API key from environment
-_api_key = os.getenv("GOOGLE_API_KEY")
+_api_key = os.getenv("MISTRAL_API_KEY")
 if not _api_key:
     raise ValueError(
-        "GOOGLE_API_KEY not found in environment variables. "
+        "MISTRAL_API_KEY not found in environment variables. "
         "Please set it in .env or as an environment variable."
     )
 
-# Initialize Gemini client - gets API key from GOOGLE_API_KEY environment variable
-_client = genai.Client(api_key=_api_key)
+# Initialize Mistral client
+_client = Mistral(api_key=_api_key)
 
 # Rate limiting and caching constants
 MAX_RETRIES = 3
@@ -43,13 +43,13 @@ _api_response_cache: Dict[str, str] = {}
 class BaseAgent(ABC):
     """Base class for all agents in the refactoring swarm."""
 
-    def __init__(self, agent_name: str, prompt_file: str, model: str = "gemma-3-4b-it"):
+    def __init__(self, agent_name: str, prompt_file: str, model: str = "mistral-large-latest"):
         """Initialize the agent.
         
         Args:
             agent_name: Name of the agent (e.g., "Auditor", "Fixer")
             prompt_file: Path to the system prompt file
-            model: Gemini model to use
+            model: Mistral model to use
         """
         self.agent_name = agent_name
         self.prompt_file = prompt_file
@@ -96,8 +96,8 @@ class BaseAgent(ABC):
             time.sleep(wait_time)
         _last_request_time = time.time()
 
-    def call_gemini_api(self, user_message: str) -> str:
-        """Call the Gemini API with caching, throttling, and retry logic.
+    def call_mistral_api(self, user_message: str) -> str:
+        """Call the Mistral API with caching, throttling, and retry logic.
         
         Args:
             user_message: User message to send
@@ -124,12 +124,15 @@ class BaseAgent(ABC):
         
         for attempt in range(MAX_RETRIES):
             try:
-                # Use google.genai client API
-                response = _client.models.generate_content(
+                # Use Mistral client API
+                response = _client.chat(
                     model=self.model_name,
-                    contents=f"{self.system_prompt}\n\n{user_message}"
+                    messages=[
+                        {"role": "system", "content": self.system_prompt},
+                        {"role": "user", "content": user_message}
+                    ]
                 )
-                result = response.text
+                result = response.choices[0].message.content
                 
                 # Cache successful response
                 _api_response_cache[cache_key] = result
@@ -140,8 +143,8 @@ class BaseAgent(ABC):
             except Exception as e:
                 error_msg = str(e)
                 
-                # Check for quota exceeded (429) or rate limit errors
-                if "429" in error_msg or "quota" in error_msg.lower() or "rate" in error_msg.lower():
+                # Check for rate limit errors
+                if "429" in error_msg or "rate" in error_msg.lower() or "quota" in error_msg.lower():
                     if attempt < MAX_RETRIES - 1:
                         wait_time = min(backoff, MAX_BACKOFF)
                         print(f"[RATE_LIMITED] Waiting {wait_time}s before retry {attempt + 1}/{MAX_RETRIES}")
@@ -150,9 +153,9 @@ class BaseAgent(ABC):
                         continue
                 
                 # For other errors or final attempt, raise
-                raise RuntimeError(f"Gemini API call failed: {error_msg}")
+                raise RuntimeError(f"Mistral API call failed: {error_msg}")
         
-        raise RuntimeError("Gemini API call failed: Max retries exceeded")
+        raise RuntimeError("Mistral API call failed: Max retries exceeded")
 
     def _parse_json_response(self, response: str) -> Dict[str, Any]:
         """Parse JSON response from API.

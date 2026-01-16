@@ -1,8 +1,12 @@
 """Orchestrator for coordinating the refactoring swarm agents."""
 
 import os
-from typing import Dict, List, Any
+import sys
 from pathlib import Path
+from typing import Dict, List, Any
+
+# Add the parent directory (project root) to sys.path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.agents.auditor import Auditor
 from src.agents.fixer import Fixer
@@ -30,6 +34,79 @@ class Orchestrator:
         self.fixer = Fixer()
         self.judge = Judge()
         self.results = {}
+
+    def _analyze_code(self, file_path: str, code: str) -> List[Dict[str, Any]]:
+        """Analyze code for issues using the auditor.
+        
+        Args:
+            file_path: Path to the file
+            code: Code content
+            
+        Returns:
+            List of issues found
+        """
+        analysis = self.auditor.analyze(file_path, code)
+        return analysis.get("issues", [])
+
+    def _apply_fixes(self, file_path: str, code: str, issues: List[Dict[str, Any]]) -> tuple[str | None, List[Dict[str, Any]]]:
+        """Apply fixes to the code using the fixer.
+        
+        Args:
+            file_path: Path to the file
+            code: Current code content
+            issues: List of issues to fix
+            
+        Returns:
+            Tuple of (refactored_code, changes) or (None, []) if error
+        """
+        fix_result = self.fixer.fix(file_path, code, issues)
+        if "error" in fix_result:
+            return None, []
+        refactored_code = fix_result.get("refactored_code", code)
+        changes = fix_result.get("changes", [])
+        return refactored_code, changes
+
+    def _validate_refactored_code(self, code: str, file_path: str) -> bool:
+        """Validate the syntax of refactored code.
+        
+        Args:
+            code: Refactored code
+            file_path: Path to the file
+            
+        Returns:
+            True if valid, False otherwise
+        """
+        validation = validate_syntax(code, file_path)
+        return validation.get("valid", False)
+
+    def _judge_changes(self, file_path: str, original_code: str, refactored_code: str, changes_summary: str) -> Dict[str, Any]:
+        """Judge the quality of changes using the judge.
+        
+        Args:
+            file_path: Path to the file
+            original_code: Original code
+            refactored_code: Refactored code
+            changes_summary: Summary of changes
+            
+        Returns:
+            Judgment dictionary from the judge
+        """
+        judgment = self.judge.validate(
+            file_path,
+            original_code,
+            refactored_code,
+            changes_summary or "Code refactored"
+        )
+        return judgment
+
+    def _run_and_check_tests(self) -> bool:
+        """Run tests and check if they pass.
+        
+        Returns:
+            True if tests pass, False otherwise
+        """
+        test_result = run_tests("tests" if os.path.exists("tests") else "sandbox/test")
+        return test_result.get("passed", False)
 
     def refactor_directory(self, target_dir: str) -> Dict[str, Any]:
         """Refactor all Python files in a directory.
@@ -81,11 +158,9 @@ class Orchestrator:
             print(f"[Iteration {iteration}/{self.max_iterations}]")
             print(f"============================================================")
             
-            # Step 1: Auditor analyzes code
+            # Step 1: Analyze code
             print(f"\n[Auditor] Analyzing {Path(file_path).name}...")
-            analysis = self.auditor.analyze(file_path, current_code)
-            
-            issues = analysis.get("issues", [])
+            issues = self._analyze_code(file_path, current_code)
             if not issues:
                 print(f"[SUCCESS] No issues found. Refactoring complete!")
                 file_improved = True
@@ -94,39 +169,34 @@ class Orchestrator:
             issue_count = len(issues)
             print(f"[WARN] Found {issue_count} issues")
             
-            # Step 2: Fixer applies fixes
+            # Step 2: Apply fixes
             print(f"\n[Fixer] Applying fixes...")
-            fix_result = self.fixer.fix(file_path, current_code, issues)
-            
-            # Check if fixes were actually applied
-            if "error" in fix_result:
-                print(f"[ERROR] Fixer failed: {fix_result.get('error', 'Unknown error')}")
+            refactored_code, changes = self._apply_fixes(file_path, current_code, issues)
+            if refactored_code is None:
+                print(f"[ERROR] Fixer failed")
                 print(f"[INFO] No fixes applied")
                 break
             
-            refactored_code = fix_result.get("refactored_code", current_code)
-            changes = fix_result.get("changes", [])
             changes_count = len(changes)
             print(f"[FIX] Applied {changes_count} fixes")
             
             # Validate syntax
-            validation = validate_syntax(refactored_code, file_path)
-            if not validation["valid"]:
+            if not self._validate_refactored_code(refactored_code, file_path):
                 print(f"[ERROR] Refactored code has syntax errors")
                 break
             
-            # Step 3: Judge validates quality
+            # Step 3: Judge changes
             print(f"\n[Judge] Validating refactored code...")
             changes_summary = "\n".join([
                 f"- {c.get('change_description', '')}"
                 for c in changes
             ])
             
-            judgment = self.judge.validate(
+            judgment = self._judge_changes(
                 file_path,
                 current_code,
                 refactored_code,
-                changes_summary or "Code refactored"
+                changes_summary
             )
             
             verdict = judgment.get("verdict", "REJECTED")
@@ -140,8 +210,7 @@ class Orchestrator:
                 
                 # Run tests
                 print(f"\n[Testing] Running pytest...")
-                test_result = run_tests("tests" if os.path.exists("tests") else "sandbox/test")
-                if test_result.get("passed"):
+                if self._run_and_check_tests():
                     print(f"Tests: PASSED")
                     print(f"[SUCCESS] Refactoring completed successfully!")
                     break
@@ -151,7 +220,7 @@ class Orchestrator:
                     
             elif verdict == "NEEDS_REVISION":
                 feedback = judgment.get("feedback", "No feedback")
-                print(f"[ERROR] Refactoring rejected: {feedback}")
+                print(f"[ERROR] Refactoring needs revision: {feedback}")
                 break
                 
             elif verdict == "REJECTED":

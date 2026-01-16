@@ -43,7 +43,7 @@ Provide a comprehensive analysis of issues, their severity, and recommendations.
 """
         
         try:
-            response = self.call_gemini_api(user_message)
+            response = self.call_mistral_api(user_message)
             result = self._parse_json_response(response)
             
             # Log the interaction
