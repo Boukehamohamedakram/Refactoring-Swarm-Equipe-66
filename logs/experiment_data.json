@@ -668,5 +668,397 @@
             "error": "Fixer returned error"
         },
         "status": "FAILURE"
+    },
+    {
+        "id": "70306dce-888c-41e4-abae-b0d15eadeee7",
+        "timestamp": "2026-01-28T13:41:46.961196",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Target directory: sandbox/test",
+            "output_response": "Orchestrator started"
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "bc6610e4-5ddc-4b66-936d-444534e582df",
+        "timestamp": "2026-01-28T13:41:46.979937",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Start refactoring file: sandbox/test\\sample_code.py",
+            "output_response": "File size: 1253 bytes",
+            "file": "sandbox/test\\sample_code.py",
+            "original_size": 1253
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "8c8ff7a1-45f3-4d65-b657-a11ddb929f38",
+        "timestamp": "2026-01-28T14:03:56.818014",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Target directory: sandbox/test",
+            "output_response": "Orchestrator started"
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "7a3b834e-18d4-4507-b146-f50aaf63a28d",
+        "timestamp": "2026-01-28T14:03:56.870920",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Start refactoring file: sandbox/test\\sample_code.py",
+            "output_response": "File size: 1253 bytes",
+            "file": "sandbox/test\\sample_code.py",
+            "original_size": 1253
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "756a8e66-cf83-4a38-9c1a-bdd4e88fbd6f",
+        "timestamp": "2026-01-28T14:03:56.910858",
+        "agent": "Auditor",
+        "model": "gemma-3-4b-it",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "\nPlease analyze the following Python file: sandbox/test\\sample_code.py\n\nCode:\n```python\nfrom typing import List, Union\n\n\nclass DataProcessor:\n    \"\"\"A class for processing data.\n    \"\"\"\n\n    def __init__(self):\n        \"\"\"Initializes the DataProcessor with an empty list of data.\n        \"\"\"\n        self.data: List[Union[int, float]] = []\n\n    def process(self, x: Union[int, float]) -> Union[int, float]:\n        \"\"\"Processes a single data point.\n\n        Args:\n            x: The data point to process.\n        Returns:\n            The processed data point.\n        \"\"\"\n        if x > 0:\n            if x < 100:\n                if x % 2 == 0:\n                    return x * 2\n                else:\n                    return x * 3\n            else:\n                return x\n        else:\n            return 0  # Handle negative input\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ndef calculate_average(numbers: List[Union[int, float]]) -> float:\n    \"\"\"Calculates the average of a list of numbers.\n\n    Args:\n        numbers: A list of numbers.\n    Returns:\n        The average of the numbers.\n    \"\"\"\n    if not numbers:\n        return 0  # Handle empty list case\n    total = sum(numbers)\n    return total / len(numbers)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ndef old_style_function() -> int:\n    \"\"\"A simple function.\"\"\"\n    y: int = 5\n    z: int = 10\n    return y + z\n\n```\n\nProvide a comprehensive analysis of issues, their severity, and recommendations.\n",
+            "output_response": "Mistral API call failed: 'Chat' object is not callable",
+            "file": "sandbox/test\\sample_code.py"
+        },
+        "status": "FAILURE"
+    },
+    {
+        "id": "7b2bf4b3-a6a6-42c4-a8bf-18b555385928",
+        "timestamp": "2026-01-28T14:03:56.940795",
+        "agent": "Auditor",
+        "model": "mistral-large-latest",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Analyze sample_code.py",
+            "output_response": "Found 0 issues",
+            "issues_count": 0
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "45b2936f-553f-45a8-8af8-ae1c87ca787d",
+        "timestamp": "2026-01-28T14:03:56.966780",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Completed refactoring sample_code.py",
+            "output_response": "File improved - iterations: 1",
+            "file": "sandbox/test\\sample_code.py",
+            "iterations": 1,
+            "final_size": 1253
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "b872ed7c-6fda-46b1-a7b0-2ed94c385cc6",
+        "timestamp": "2026-01-28T14:03:56.989506",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Start refactoring file: sandbox/test\\test_sample.py",
+            "output_response": "File size: 207 bytes",
+            "file": "sandbox/test\\test_sample.py",
+            "original_size": 207
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "29c33022-19f3-4f91-9d6c-ff6fac453f67",
+        "timestamp": "2026-01-28T14:03:58.901696",
+        "agent": "Auditor",
+        "model": "gemma-3-4b-it",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "\nPlease analyze the following Python file: sandbox/test\\test_sample.py\n\nCode:\n```python\nfrom sandbox.utils import hello_world\n\n\ndef main() -> None:\n    \"\"\"Main execution block.\n    Prints the 'Hello from sandbox' message.\n    \"\"\"\n    print(hello_world())\n\n\nif __name__ == '__main__':\n    main()\n\n```\n\nProvide a comprehensive analysis of issues, their severity, and recommendations.\n",
+            "output_response": "Mistral API call failed: 'Chat' object is not callable",
+            "file": "sandbox/test\\test_sample.py"
+        },
+        "status": "FAILURE"
+    },
+    {
+        "id": "1dbf99f5-4d99-4b56-b1e2-940dce35dace",
+        "timestamp": "2026-01-28T14:03:58.927526",
+        "agent": "Auditor",
+        "model": "mistral-large-latest",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Analyze test_sample.py",
+            "output_response": "Found 0 issues",
+            "issues_count": 0
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "7aa94fbc-0428-4017-b927-4a90215ef729",
+        "timestamp": "2026-01-28T14:03:58.954104",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Completed refactoring test_sample.py",
+            "output_response": "File improved - iterations: 1",
+            "file": "sandbox/test\\test_sample.py",
+            "iterations": 1,
+            "final_size": 207
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "7a9f56e7-3c6d-41f7-a997-15b9d85a90f6",
+        "timestamp": "2026-01-28T14:05:22.825401",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Target directory: sandbox/test",
+            "output_response": "Orchestrator started"
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "acbe496f-2bac-44ed-a4ad-f847d20b45e7",
+        "timestamp": "2026-01-28T14:05:22.877380",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Start refactoring file: sandbox/test\\sample_code.py",
+            "output_response": "File size: 1253 bytes",
+            "file": "sandbox/test\\sample_code.py",
+            "original_size": 1253
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "65249548-431a-4452-a302-c1befabe85bc",
+        "timestamp": "2026-01-28T14:05:22.926254",
+        "agent": "Auditor",
+        "model": "gemma-3-4b-it",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "\nPlease analyze the following Python file: sandbox/test\\sample_code.py\n\nCode:\n```python\nfrom typing import List, Union\n\n\nclass DataProcessor:\n    \"\"\"A class for processing data.\n    \"\"\"\n\n    def __init__(self):\n        \"\"\"Initializes the DataProcessor with an empty list of data.\n        \"\"\"\n        self.data: List[Union[int, float]] = []\n\n    def process(self, x: Union[int, float]) -> Union[int, float]:\n        \"\"\"Processes a single data point.\n\n        Args:\n            x: The data point to process.\n        Returns:\n            The processed data point.\n        \"\"\"\n        if x > 0:\n            if x < 100:\n                if x % 2 == 0:\n                    return x * 2\n                else:\n                    return x * 3\n            else:\n                return x\n        else:\n            return 0  # Handle negative input\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ndef calculate_average(numbers: List[Union[int, float]]) -> float:\n    \"\"\"Calculates the average of a list of numbers.\n\n    Args:\n        numbers: A list of numbers.\n    Returns:\n        The average of the numbers.\n    \"\"\"\n    if not numbers:\n        return 0  # Handle empty list case\n    total = sum(numbers)\n    return total / len(numbers)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ndef old_style_function() -> int:\n    \"\"\"A simple function.\"\"\"\n    y: int = 5\n    z: int = 10\n    return y + z\n\n```\n\nProvide a comprehensive analysis of issues, their severity, and recommendations.\n",
+            "output_response": "Mistral API call failed: 'Chat' object is not callable",
+            "file": "sandbox/test\\sample_code.py"
+        },
+        "status": "FAILURE"
+    },
+    {
+        "id": "1296a8ae-52bc-403b-9e38-0b9011555298",
+        "timestamp": "2026-01-28T14:05:22.965635",
+        "agent": "Auditor",
+        "model": "mistral-large-latest",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Analyze sample_code.py",
+            "output_response": "Found 0 issues",
+            "issues_count": 0
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "b6fcb795-514e-49b8-ae1f-f0b1e0edc68e",
+        "timestamp": "2026-01-28T14:05:22.995918",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Completed refactoring sample_code.py",
+            "output_response": "File improved - iterations: 1",
+            "file": "sandbox/test\\sample_code.py",
+            "iterations": 1,
+            "final_size": 1253
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "518b8023-0184-4ac9-afb6-a84c2f51f06c",
+        "timestamp": "2026-01-28T14:05:23.029636",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Start refactoring file: sandbox/test\\test_sample.py",
+            "output_response": "File size: 206 bytes",
+            "file": "sandbox/test\\test_sample.py",
+            "original_size": 206
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "21da68eb-b2b6-4d11-8739-c3dd1a62b1b5",
+        "timestamp": "2026-01-28T14:05:24.918721",
+        "agent": "Auditor",
+        "model": "gemma-3-4b-it",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "\nPlease analyze the following Python file: sandbox/test\\test_sample.py\n\nCode:\n```python\nfrom sandbox.utils import hello_world\n\n\ndef main() -> None:\n    \"\"\"Main execution block.\n    Prints the 'Hello from sandbox' message.\n    \"\"\"\n    print(hello_world()\n\n\nif __name__ == '__main__':\n    main()\n\n```\n\nProvide a comprehensive analysis of issues, their severity, and recommendations.\n",
+            "output_response": "Mistral API call failed: 'Chat' object is not callable",
+            "file": "sandbox/test\\test_sample.py"
+        },
+        "status": "FAILURE"
+    },
+    {
+        "id": "f7bd48c1-3d5c-4c5e-94c5-042c89923bc9",
+        "timestamp": "2026-01-28T14:05:24.944429",
+        "agent": "Auditor",
+        "model": "mistral-large-latest",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Analyze test_sample.py",
+            "output_response": "Found 0 issues",
+            "issues_count": 0
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "9044fc69-c6ff-4dcd-a196-699b285bea66",
+        "timestamp": "2026-01-28T14:05:24.965985",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Completed refactoring test_sample.py",
+            "output_response": "File improved - iterations: 1",
+            "file": "sandbox/test\\test_sample.py",
+            "iterations": 1,
+            "final_size": 206
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "5483d3a4-b668-4fc9-97b9-fd173339a092",
+        "timestamp": "2026-01-28T14:11:34.653622",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Target directory: sandbox/test",
+            "output_response": "Orchestrator started"
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "a1fdde86-7f86-4cc1-9015-5f347f053cd7",
+        "timestamp": "2026-01-28T14:11:34.698851",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Start refactoring file: sandbox/test\\sample_code.py",
+            "output_response": "File size: 1253 bytes",
+            "file": "sandbox/test\\sample_code.py",
+            "original_size": 1253
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "f2d418f8-d644-4fbd-8697-09a32ae4a11d",
+        "timestamp": "2026-01-28T14:11:35.077545",
+        "agent": "Auditor",
+        "model": "gemma-3-4b-it",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "\nPlease analyze the following Python file: sandbox/test\\sample_code.py\n\nCode:\n```python\nfrom typing import List, Union\n\n\nclass DataProcessor:\n    \"\"\"A class for processing data.\n    \"\"\"\n\n    def __init__(self):\n        \"\"\"Initializes the DataProcessor with an empty list of data.\n        \"\"\"\n        self.data: List[Union[int, float]] = []\n\n    def process(self, x: Union[int, float]) -> Union[int, float]:\n        \"\"\"Processes a single data point.\n\n        Args:\n            x: The data point to process.\n        Returns:\n            The processed data point.\n        \"\"\"\n        if x > 0:\n            if x < 100:\n                if x % 2 == 0:\n                    return x * 2\n                else:\n                    return x * 3\n            else:\n                return x\n        else:\n            return 0  # Handle negative input\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ndef calculate_average(numbers: List[Union[int, float]]) -> float:\n    \"\"\"Calculates the average of a list of numbers.\n\n    Args:\n        numbers: A list of numbers.\n    Returns:\n        The average of the numbers.\n    \"\"\"\n    if not numbers:\n        return 0  # Handle empty list case\n    total = sum(numbers)\n    return total / len(numbers)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ndef old_style_function() -> int:\n    \"\"\"A simple function.\"\"\"\n    y: int = 5\n    z: int = 10\n    return y + z\n\n```\n\nProvide a comprehensive analysis of issues, their severity, and recommendations.\n",
+            "output_response": "Mistral API call failed: Status: 400. Message: {\"object\":\"error\",\"message\":\"Invalid model: gemma-3-4b-it\",\"type\":\"invalid_model\",\"param\":null,\"code\":\"1500\"}",
+            "file": "sandbox/test\\sample_code.py"
+        },
+        "status": "FAILURE"
+    },
+    {
+        "id": "13a47783-ec51-4775-adf5-58d2c5bbd56b",
+        "timestamp": "2026-01-28T14:11:35.106439",
+        "agent": "Auditor",
+        "model": "mistral-large-latest",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Analyze sample_code.py",
+            "output_response": "Found 0 issues",
+            "issues_count": 0
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "db4a95ac-5184-4e1a-ba7c-026447d31123",
+        "timestamp": "2026-01-28T14:11:35.134995",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Completed refactoring sample_code.py",
+            "output_response": "File improved - iterations: 1",
+            "file": "sandbox/test\\sample_code.py",
+            "iterations": 1,
+            "final_size": 1253
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "5c2a2118-42c7-40c2-936f-e9c6c7e9c933",
+        "timestamp": "2026-01-28T14:11:35.172398",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Start refactoring file: sandbox/test\\test_sample.py",
+            "output_response": "File size: 206 bytes",
+            "file": "sandbox/test\\test_sample.py",
+            "original_size": 206
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "692e5676-16ed-4303-bfa2-8a0033d34d45",
+        "timestamp": "2026-01-28T14:11:37.023824",
+        "agent": "Auditor",
+        "model": "gemma-3-4b-it",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "\nPlease analyze the following Python file: sandbox/test\\test_sample.py\n\nCode:\n```python\nfrom sandbox.utils import hello_world\n\n\ndef main() -> None:\n    \"\"\"Main execution block.\n    Prints the 'Hello from sandbox' message.\n    \"\"\"\n    print(hello_world()\n\n\nif __name__ == '__main__':\n    main()\n\n```\n\nProvide a comprehensive analysis of issues, their severity, and recommendations.\n",
+            "output_response": "Mistral API call failed: Status: 400. Message: {\"object\":\"error\",\"message\":\"Invalid model: gemma-3-4b-it\",\"type\":\"invalid_model\",\"param\":null,\"code\":\"1500\"}",
+            "file": "sandbox/test\\test_sample.py"
+        },
+        "status": "FAILURE"
+    },
+    {
+        "id": "fe00cca7-5695-4c7f-9a2c-7299f14dd277",
+        "timestamp": "2026-01-28T14:11:37.062795",
+        "agent": "Auditor",
+        "model": "mistral-large-latest",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Analyze test_sample.py",
+            "output_response": "Found 0 issues",
+            "issues_count": 0
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "6c34cc48-03ca-4d41-a8c2-427915fafdfa",
+        "timestamp": "2026-01-28T14:11:37.101121",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Completed refactoring test_sample.py",
+            "output_response": "File improved - iterations: 1",
+            "file": "sandbox/test\\test_sample.py",
+            "iterations": 1,
+            "final_size": 206
+        },
+        "status": "SUCCESS"
     }
 ]

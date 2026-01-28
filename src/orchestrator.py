@@ -3,7 +3,7 @@
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, TypedDict
 
 # Add the parent directory (project root) to sys.path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -21,11 +21,28 @@ from src.tools import (
 from src.utils.logger import log_experiment, ActionType
 
 
+# Define the state structure for workflow orchestration
+class RefactoringState(TypedDict, total=False):
+    """State for the refactoring workflow."""
+    file_path: str
+    original_code: str
+    current_code: str
+    iteration: int
+    issues: List[Dict[str, Any]]
+    refactored_code: str
+    changes: List[Dict[str, Any]]
+    verdict: str
+    feedback: str
+    tests_passed: bool
+    file_improved: bool
+    error: str
+
+
 class Orchestrator:
-    """Orchestrates the refactoring workflow across multiple agents."""
+    """Orchestrates the refactoring workflow across multiple agents with state management."""
 
     def __init__(self, max_iterations: int = 10):
-        """Initialize the orchestrator.
+        """Initialize the orchestrator with state machine.
         
         Args:
             max_iterations: Maximum number of refactoring iterations per file
@@ -109,6 +126,166 @@ class Orchestrator:
         test_result = run_tests("tests" if os.path.exists("tests") else "sandbox/test")
         return test_result.get("passed", False)
 
+    # State machine node functions
+    def _node_analyze(self, state: RefactoringState) -> RefactoringState:
+        """State node: Analyze code for issues."""
+        state["iteration"] += 1
+        print(f"\n[Iteration {state['iteration']}/{self.max_iterations}] Analyzing...")
+        
+        issues = self._analyze_code(state["file_path"], state["current_code"])
+        state["issues"] = issues
+        
+        log_experiment(
+            agent_name="Auditor",
+            model_used="mistral-large-latest",
+            action=ActionType.ANALYSIS,
+            details={
+                "input_prompt": f"Analyze {Path(state['file_path']).name}",
+                "output_response": f"Found {len(issues)} issues",
+                "issues_count": len(issues)
+            },
+            status="SUCCESS"
+        )
+        
+        return state
+
+    def _node_apply_fixes(self, state: RefactoringState) -> RefactoringState:
+        """State node: Apply fixes to code."""
+        print(f"[{state['iteration']}] Applying fixes...")
+        
+        refactored_code, changes = self._apply_fixes(
+            state["file_path"],
+            state["current_code"],
+            state["issues"]
+        )
+        
+        if refactored_code is None:
+            state["error"] = "Fixer failed to generate refactored code"
+            print(f"[ERROR] {state['error']}")
+            return state
+        
+        state["refactored_code"] = refactored_code
+        state["changes"] = changes
+        
+        log_experiment(
+            agent_name="Fixer",
+            model_used="mistral-large-latest",
+            action=ActionType.GENERATION,
+            details={
+                "input_prompt": f"Fix issues in {Path(state['file_path']).name}",
+                "output_response": f"Applied {len(changes)} fixes",
+                "changes_count": len(changes)
+            },
+            status="SUCCESS"
+        )
+        
+        return state
+
+    def _node_validate(self, state: RefactoringState) -> RefactoringState:
+        """State node: Validate refactored code syntax."""
+        print(f"[{state['iteration']}] Validating syntax...")
+        
+        is_valid = self._validate_refactored_code(state["refactored_code"], state["file_path"])
+        
+        if not is_valid:
+            state["error"] = "Refactored code has syntax errors"
+            print(f"[ERROR] {state['error']}")
+            return state
+        
+        log_experiment(
+            agent_name="Orchestrator",
+            model_used="SYSTEM",
+            action=ActionType.DEBUG,
+            details={
+                "input_prompt": f"Validate {Path(state['file_path']).name}",
+                "output_response": "Syntax validation passed"
+            },
+            status="SUCCESS"
+        )
+        
+        return state
+
+    def _node_judge(self, state: RefactoringState) -> RefactoringState:
+        """State node: Judge changes quality."""
+        print(f"[{state['iteration']}] Judge validating...")
+        
+        changes_summary = "\n".join([
+            f"- {c.get('change_description', '')}"
+            for c in state["changes"]
+        ])
+        
+        judgment = self._judge_changes(
+            state["file_path"],
+            state["current_code"],
+            state["refactored_code"],
+            changes_summary
+        )
+        
+        state["verdict"] = judgment.get("verdict", "REJECTED")
+        state["feedback"] = judgment.get("feedback", "")
+        
+        log_experiment(
+            agent_name="Judge",
+            model_used="mistral-large-latest",
+            action=ActionType.DEBUG,
+            details={
+                "input_prompt": f"Judge changes for {Path(state['file_path']).name}",
+                "output_response": f"Verdict: {state['verdict']}",
+                "verdict": state["verdict"],
+                "feedback": state["feedback"]
+            },
+            status="SUCCESS"
+        )
+        
+        return state
+
+    def _node_write_changes(self, state: RefactoringState) -> RefactoringState:
+        """State node: Write approved changes to file."""
+        print(f"[{state['iteration']}] Writing changes...")
+        
+        try:
+            write_file(state["file_path"], state["refactored_code"])
+            state["current_code"] = state["refactored_code"]
+            state["file_improved"] = True
+            
+            log_experiment(
+                agent_name="Orchestrator",
+                model_used="SYSTEM",
+                action=ActionType.FIX,
+                details={
+                    "input_prompt": f"Write changes to {Path(state['file_path']).name}",
+                    "output_response": "Changes written successfully",
+                    "file": state["file_path"]
+                },
+                status="SUCCESS"
+            )
+        except Exception as e:
+            state["error"] = f"Failed to write changes: {str(e)}"
+            print(f"[ERROR] {state['error']}")
+        
+        return state
+
+    def _node_run_tests(self, state: RefactoringState) -> RefactoringState:
+        """State node: Run tests on refactored code."""
+        print(f"[{state['iteration']}] Running tests...")
+        
+        tests_passed = self._run_and_check_tests()
+        state["tests_passed"] = tests_passed
+        
+        log_experiment(
+            agent_name="Orchestrator",
+            model_used="SYSTEM",
+            action=ActionType.DEBUG,
+            details={
+                "input_prompt": f"Run tests for {Path(state['file_path']).name}",
+                "output_response": f"Tests {'PASSED' if tests_passed else 'FAILED'}",
+                "tests_passed": tests_passed
+            },
+            status="SUCCESS" if tests_passed else "FAILURE"
+        )
+        
+        return state
+
     def refactor_directory(self, target_dir: str) -> Dict[str, Any]:
         """Refactor all Python files in a directory.
         
@@ -134,7 +311,7 @@ class Orchestrator:
         }
 
     def refactor_file(self, file_path: str) -> Dict[str, Any]:
-        """Refactor a single Python file through the agent workflow.
+        """Refactor a single Python file using state-based workflow.
         
         Args:
             file_path: Path to file to refactor
@@ -160,11 +337,7 @@ class Orchestrator:
             )
             return {"status": "error", "error": str(e)}
         
-        current_code = original_code
-        iteration = 0
-        file_improved = False
-        
-        # Log start of refactoring for this file
+        # Log start of refactoring
         log_experiment(
             agent_name="Orchestrator",
             model_used="SYSTEM",
@@ -178,244 +351,105 @@ class Orchestrator:
             status="SUCCESS"
         )
         
-        while iteration < self.max_iterations:
-            iteration += 1
-            print(f"\n============================================================")
-            print(f"[Iteration {iteration}/{self.max_iterations}]")
-            print(f"============================================================")
+        # Initialize state
+        state: RefactoringState = {
+            "file_path": file_path,
+            "original_code": original_code,
+            "current_code": original_code,
+            "iteration": 0,
+            "issues": [],
+            "refactored_code": original_code,
+            "changes": [],
+            "verdict": "PENDING",
+            "feedback": "",
+            "tests_passed": False,
+            "file_improved": False,
+            "error": ""
+        }
+        
+        # State machine loop
+        print(f"\n[Orchestrator] Starting refactoring workflow for {Path(file_path).name}...")
+        
+        while state["iteration"] < self.max_iterations:
+            # Step 1: Analyze
+            state = self._node_analyze(state)
+            print(f"[{state['iteration']}] Analyzed: {len(state['issues'])} issues found")
             
-            # Step 1: Analyze code
-            print(f"\n[Auditor] Analyzing {Path(file_path).name}...")
-            issues = self._analyze_code(file_path, current_code)
-            if not issues:
-                print(f"[SUCCESS] No issues found. Refactoring complete!")
-                file_improved = True
-                log_experiment(
-                    agent_name="Orchestrator",
-                    model_used="SYSTEM",
-                    action=ActionType.ANALYSIS,
-                    details={
-                        "input_prompt": f"Audit result for {Path(file_path).name}",
-                        "output_response": "No issues found - refactoring complete",
-                        "file": file_path,
-                        "iteration": iteration,
-                        "issues_count": 0
-                    },
-                    status="SUCCESS"
-                )
+            if not state["issues"]:
+                state["file_improved"] = True
                 break
-            
-            issue_count = len(issues)
-            print(f"[WARN] Found {issue_count} issues")
-            log_experiment(
-                agent_name="Orchestrator",
-                model_used="SYSTEM",
-                action=ActionType.ANALYSIS,
-                details={
-                    "input_prompt": f"Audit check on {Path(file_path).name}",
-                    "output_response": f"Found {issue_count} issues requiring fixes",
-                    "file": file_path,
-                    "iteration": iteration,
-                    "issues_count": issue_count,
-                    "issues": issues[:5]  # Log first 5 issues
-                },
-                status="SUCCESS"
-            )
             
             # Step 2: Apply fixes
-            print(f"\n[Fixer] Applying fixes...")
-            refactored_code, changes = self._apply_fixes(file_path, current_code, issues)
-            if refactored_code is None:
-                print(f"[ERROR] Fixer failed")
-                print(f"[INFO] No fixes applied")
-                log_experiment(
-                    agent_name="Orchestrator",
-                    model_used="SYSTEM",
-                    action=ActionType.FIX,
-                    details={
-                        "input_prompt": f"Apply fixes to {Path(file_path).name} (iteration {iteration})",
-                        "output_response": "Fixer failed to generate fixes",
-                        "file": file_path,
-                        "iteration": iteration,
-                        "error": "Fixer returned error"
-                    },
-                    status="FAILURE"
-                )
+            state = self._node_apply_fixes(state)
+            if state.get("error"):
+                print(f"[{state['iteration']}] Error: {state['error']}")
                 break
             
-            changes_count = len(changes)
-            print(f"[FIX] Applied {changes_count} fixes")
-            log_experiment(
-                agent_name="Orchestrator",
-                model_used="SYSTEM",
-                action=ActionType.FIX,
-                details={
-                    "input_prompt": f"Apply {issue_count} fixes to {Path(file_path).name}",
-                    "output_response": f"Applied {changes_count} changes successfully",
-                    "file": file_path,
-                    "iteration": iteration,
-                    "changes_count": changes_count,
-                    "changes": changes[:5]  # Log first 5 changes
-                },
-                status="SUCCESS"
-            )
-            
-            # Validate syntax
-            if not self._validate_refactored_code(refactored_code, file_path):
-                print(f"[ERROR] Refactored code has syntax errors")
-                log_experiment(
-                    agent_name="Orchestrator",
-                    model_used="SYSTEM",
-                    action=ActionType.DEBUG,
-                    details={
-                        "input_prompt": f"Validate syntax for {Path(file_path).name}",
-                        "output_response": "Syntax validation failed - code has errors",
-                        "file": file_path,
-                        "iteration": iteration
-                    },
-                    status="FAILURE"
-                )
+            # Step 3: Validate
+            state = self._node_validate(state)
+            if state.get("error"):
+                print(f"[{state['iteration']}] Validation error: {state['error']}")
                 break
             
-            # Step 3: Judge changes
-            print(f"\n[Judge] Validating refactored code...")
-            changes_summary = "\n".join([
-                f"- {c.get('change_description', '')}"
-                for c in changes
-            ])
+            # Step 4: Judge
+            state = self._node_judge(state)
+            print(f"[{state['iteration']}] Judge verdict: {state['verdict']}")
             
-            judgment = self._judge_changes(
-                file_path,
-                current_code,
-                refactored_code,
-                changes_summary
-            )
-            
-            verdict = judgment.get("verdict", "REJECTED")
-            print(f"[VERDICT] Judge: {verdict}")
-            log_experiment(
-                agent_name="Orchestrator",
-                model_used="SYSTEM",
-                action=ActionType.ANALYSIS,
-                details={
-                    "input_prompt": f"Judge quality of refactored {Path(file_path).name}",
-                    "output_response": f"Verdict: {verdict}",
-                    "file": file_path,
-                    "iteration": iteration,
-                    "verdict": verdict,
-                    "feedback": judgment.get("feedback", "")
-                },
-                status="SUCCESS"
-            )
-            
-            if verdict == "APPROVED":
-                # Write the refactored code
-                write_file(file_path, refactored_code)
-                current_code = refactored_code
-                file_improved = True
-                
-                log_experiment(
-                    agent_name="Orchestrator",
-                    model_used="SYSTEM",
-                    action=ActionType.FIX,
-                    details={
-                        "input_prompt": f"Write approved changes to {Path(file_path).name}",
-                        "output_response": "Changes written successfully",
-                        "file": file_path,
-                        "iteration": iteration
-                    },
-                    status="SUCCESS"
-                )
-                
-                # Run tests
-                print(f"\n[Testing] Running pytest...")
-                if self._run_and_check_tests():
-                    print(f"Tests: PASSED")
-                    print(f"[SUCCESS] Refactoring completed successfully!")
-                    log_experiment(
-                        agent_name="Orchestrator",
-                        model_used="SYSTEM",
-                        action=ActionType.DEBUG,
-                        details={
-                            "input_prompt": f"Run tests for {Path(file_path).name}",
-                            "output_response": "All tests passed - refactoring complete",
-                            "file": file_path,
-                            "iteration": iteration,
-                            "final_size": len(current_code)
-                        },
-                        status="SUCCESS"
-                    )
-                    break
-                else:
-                    print(f"Tests: FAILED")
-                    log_experiment(
-                        agent_name="Orchestrator",
-                        model_used="SYSTEM",
-                        action=ActionType.DEBUG,
-                        details={
-                            "input_prompt": f"Run tests for {Path(file_path).name}",
-                            "output_response": "Tests failed - will retry in next iteration",
-                            "file": file_path,
-                            "iteration": iteration
-                        },
-                        status="FAILURE"
-                    )
-                    # Continue iterating if tests fail
-                    
-            elif verdict == "NEEDS_REVISION":
-                feedback = judgment.get("feedback", "No feedback")
-                print(f"[ERROR] Refactoring needs revision: {feedback}")
-                log_experiment(
-                    agent_name="Orchestrator",
-                    model_used="SYSTEM",
-                    action=ActionType.ANALYSIS,
-                    details={
-                        "input_prompt": f"Judge evaluation of {Path(file_path).name}",
-                        "output_response": f"Needs revision: {feedback}",
-                        "file": file_path,
-                        "iteration": iteration
-                    },
-                    status="FAILURE"
-                )
+            if state["verdict"] != "APPROVED":
                 break
-                
-            elif verdict == "REJECTED":
-                feedback = judgment.get("feedback", "No feedback")
-                print(f"[ERROR] Refactoring rejected: {feedback}")
-                log_experiment(
-                    agent_name="Orchestrator",
-                    model_used="SYSTEM",
-                    action=ActionType.ANALYSIS,
-                    details={
-                        "input_prompt": f"Judge evaluation of {Path(file_path).name}",
-                        "output_response": f"Rejected: {feedback}",
-                        "file": file_path,
-                        "iteration": iteration
-                    },
-                    status="FAILURE"
-                )
+            
+            # Step 5: Write changes
+            state = self._node_write_changes(state)
+            print(f"[{state['iteration']}] Changes written")
+            
+            # Step 6: Run tests
+            state = self._node_run_tests(state)
+            print(f"[{state['iteration']}] Tests: {'PASSED' if state['tests_passed'] else 'FAILED'}")
+            
+            if state["tests_passed"]:
                 break
         
-        if iteration >= self.max_iterations:
-            print(f"\n[WARNING] Reached maximum iterations ({self.max_iterations})")
+        # Log completion
+        if state["file_improved"]:
             log_experiment(
                 agent_name="Orchestrator",
                 model_used="SYSTEM",
                 action=ActionType.ANALYSIS,
                 details={
-                    "input_prompt": f"Refactor {Path(file_path).name}",
-                    "output_response": f"Max iterations ({self.max_iterations}) reached",
+                    "input_prompt": f"Completed refactoring {Path(file_path).name}",
+                    "output_response": f"File improved - iterations: {state['iteration']}",
                     "file": file_path,
-                    "final_iteration": iteration
+                    "iterations": state["iteration"],
+                    "final_size": len(state["current_code"])
+                },
+                status="SUCCESS"
+            )
+        else:
+            log_experiment(
+                agent_name="Orchestrator",
+                model_used="SYSTEM",
+                action=ActionType.ANALYSIS,
+                details={
+                    "input_prompt": f"Refactoring {Path(file_path).name}",
+                    "output_response": f"No improvements applied - iterations: {state['iteration']}",
+                    "file": file_path,
+                    "iterations": state["iteration"],
+                    "error": state.get("error", "")
                 },
                 status="FAILURE"
             )
         
+        # Store results
         self.results[file_path] = {
-            "iterations": iteration,
-            "improved": file_improved,
+            "iterations": state["iteration"],
+            "improved": state["file_improved"],
             "original_size": len(original_code),
-            "final_size": len(current_code)
+            "final_size": len(state["current_code"])
         }
         
+        print(f"[Result] {Path(file_path).name}: "
+              f"iterations={state['iteration']}, "
+              f"improved={state['file_improved']}")
+        
         return self.results[file_path]
+

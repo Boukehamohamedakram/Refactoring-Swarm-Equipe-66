@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict
 
-from mistralai import Mistral
+from mistralai.client import MistralClient
 from dotenv import load_dotenv
 
 from src.utils.logger import ActionType, log_experiment
@@ -25,7 +25,7 @@ if not _api_key:
     )
 
 # Initialize Mistral client
-_client = Mistral(api_key=_api_key)
+_client = MistralClient(api_key=_api_key)
 
 # Rate limiting and caching constants
 MAX_RETRIES = 3
