@@ -3,5 +3,6 @@
 from src.agents.auditor import Auditor
 from src.agents.fixer import Fixer
 from src.agents.judge import Judge
+from src.agents.tester import Tester
 
-__all__ = ["Auditor", "Fixer", "Judge"]
+__all__ = ["Auditor", "Fixer", "Judge", "Tester"]

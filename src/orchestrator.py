@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.agents.auditor import Auditor
 from src.agents.fixer import Fixer
 from src.agents.judge import Judge
+from src.agents.tester import Tester
 from src.tools import (
     discover_python_files,
     read_file,
@@ -36,6 +37,9 @@ class RefactoringState(TypedDict, total=False):
     tests_passed: bool
     file_improved: bool
     error: str
+    test_code: str
+    test_error: str
+    feedback_loop_count: int
 
 
 class Orchestrator:
@@ -51,6 +55,7 @@ class Orchestrator:
         self.auditor = Auditor()
         self.fixer = Fixer()
         self.judge = Judge()
+        self.tester = Tester()
         self.results = {}
 
     def _analyze_code(self, file_path: str, code: str) -> List[Dict[str, Any]]:
@@ -286,6 +291,96 @@ class Orchestrator:
         
         return state
 
+    def _node_generate_tests(self, state: RefactoringState) -> RefactoringState:
+        """State node: Generate unit tests for the refactored code."""
+        print(f"[{state['iteration']}] Generating unit tests...")
+        
+        test_result = self.tester.generate_tests(
+            state["file_path"],
+            state["current_code"],
+            state["original_code"]
+        )
+        
+        if "error" in test_result:
+            state["test_error"] = test_result.get("error", "Unknown error")
+            print(f"[WARN] Test generation failed: {state['test_error']}")
+            return state
+        
+        state["test_code"] = test_result.get("test_code", "")
+        test_count = test_result.get("test_count", 0)
+        
+        log_experiment(
+            agent_name="Tester",
+            model_used="mistral-large-latest",
+            action=ActionType.GENERATION,
+            details={
+                "input_prompt": f"Generate tests for {Path(state['file_path']).name}",
+                "output_response": f"Generated {test_count} test functions",
+                "test_count": test_count,
+                "coverage_areas": test_result.get("coverage_areas", [])
+            },
+            status="SUCCESS"
+        )
+        
+        return state
+
+    def _node_feedback_loop(self, state: RefactoringState) -> RefactoringState:
+        """State node: Implement feedback loop for test failures."""
+        if state.get("tests_passed"):
+            return state
+        
+        # Tests failed - initiate feedback loop
+        state["feedback_loop_count"] = state.get("feedback_loop_count", 0) + 1
+        
+        if state["feedback_loop_count"] > 2:
+            print(f"[INFO] Feedback loop limit reached ({state['feedback_loop_count']} attempts)")
+            return state
+        
+        print(f"[FEEDBACK LOOP] Attempt {state['feedback_loop_count']}: Requesting Fixer to address test failures...")
+        
+        # Create feedback message with test failure details
+        feedback_msg = f"""
+Test execution failed. Please fix the code to make the tests pass.
+
+Current issues:
+- Tests are failing after refactoring
+- The refactored code needs adjustments
+
+Please analyze the refactored code and apply additional fixes.
+Focus on functionality that would make the generated tests pass.
+"""
+        
+        # Re-run fixer with feedback
+        print(f"[{state['iteration']}] Applying fixes based on test feedback...")
+        refactored_code, changes = self._apply_fixes(
+            state["file_path"],
+            state["current_code"],
+            [{"issue": "Test failure", "description": feedback_msg}]
+        )
+        
+        if refactored_code is None:
+            state["error"] = "Fixer failed in feedback loop"
+            print(f"[ERROR] {state['error']}")
+            return state
+        
+        state["refactored_code"] = refactored_code
+        state["changes"] = changes
+        
+        log_experiment(
+            agent_name="Fixer",
+            model_used="mistral-large-latest",
+            action=ActionType.FIX,
+            details={
+                "input_prompt": f"Fix test failures in {Path(state['file_path']).name} (feedback loop #{state['feedback_loop_count']})",
+                "output_response": f"Applied {len(changes)} additional fixes",
+                "feedback_loop_count": state["feedback_loop_count"],
+                "changes_count": len(changes)
+            },
+            status="SUCCESS"
+        )
+        
+        return state
+
     def refactor_directory(self, target_dir: str) -> Dict[str, Any]:
         """Refactor all Python files in a directory.
         
@@ -364,7 +459,10 @@ class Orchestrator:
             "feedback": "",
             "tests_passed": False,
             "file_improved": False,
-            "error": ""
+            "error": "",
+            "test_code": "",
+            "test_error": "",
+            "feedback_loop_count": 0
         }
         
         # State machine loop
@@ -405,6 +503,15 @@ class Orchestrator:
             # Step 6: Run tests
             state = self._node_run_tests(state)
             print(f"[{state['iteration']}] Tests: {'PASSED' if state['tests_passed'] else 'FAILED'}")
+            
+            # Step 7: Generate unit tests
+            state = self._node_generate_tests(state)
+            
+            # Step 8: Feedback loop for test failures
+            if not state["tests_passed"]:
+                state = self._node_feedback_loop(state)
+                # Continue to next iteration to retry with feedback
+                continue
             
             if state["tests_passed"]:
                 break
