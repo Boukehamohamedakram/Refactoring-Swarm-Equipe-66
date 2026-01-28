@@ -381,6 +381,26 @@ Focus on functionality that would make the generated tests pass.
         
         return state
 
+    def _validate_path(self, file_path: str, target_dir: str) -> bool:
+        """Validate that file_path is within target_dir.
+        
+        Args:
+            file_path: Path to file to validate
+            target_dir: Directory that file_path should be within
+            
+        Returns:
+            True if valid, False otherwise
+        """
+        try:
+            file_path_obj = Path(file_path).resolve()
+            target_dir_obj = Path(target_dir).resolve()
+            
+            # Check if file_path is relative to target_dir
+            file_path_obj.relative_to(target_dir_obj)
+            return True
+        except (ValueError, RuntimeError):
+            return False
+
     def refactor_directory(self, target_dir: str) -> Dict[str, Any]:
         """Refactor all Python files in a directory.
         
@@ -390,14 +410,89 @@ Focus on functionality that would make the generated tests pass.
         Returns:
             Results dictionary with refactoring status
         """
+        # Validate target_dir exists
+        target_path = Path(target_dir).resolve()
+        if not target_path.exists():
+            error_msg = f"Target directory does not exist: {target_dir}"
+            print(f"[ERROR] {error_msg}")
+            log_experiment(
+                agent_name="Orchestrator",
+                model_used="SYSTEM",
+                action=ActionType.DEBUG,
+                details={
+                    "input_prompt": f"Validate target directory: {target_dir}",
+                    "output_response": error_msg,
+                    "target_dir": target_dir
+                },
+                status="FAILURE"
+            )
+            return {
+                "status": "error",
+                "error": error_msg,
+                "files_processed": 0,
+                "results": {}
+            }
+        
+        if not target_path.is_dir():
+            error_msg = f"Target path is not a directory: {target_dir}"
+            print(f"[ERROR] {error_msg}")
+            log_experiment(
+                agent_name="Orchestrator",
+                model_used="SYSTEM",
+                action=ActionType.DEBUG,
+                details={
+                    "input_prompt": f"Validate target directory: {target_dir}",
+                    "output_response": error_msg,
+                    "target_dir": target_dir
+                },
+                status="FAILURE"
+            )
+            return {
+                "status": "error",
+                "error": error_msg,
+                "files_processed": 0,
+                "results": {}
+            }
+        
+        # Log directory validation success
+        log_experiment(
+            agent_name="Orchestrator",
+            model_used="SYSTEM",
+            action=ActionType.DEBUG,
+            details={
+                "input_prompt": f"Validate target directory: {target_dir}",
+                "output_response": f"Target directory validated: {str(target_path)}",
+                "target_dir": str(target_path)
+            },
+            status="SUCCESS"
+        )
+        
         # Discover Python files
         python_files = discover_python_files(target_dir)
         print(f"\n[INFO] Discovered {len(python_files)} Python files")
         
         # Process each file
         for file_path in python_files:
+            # Validate file is within target_dir
+            if not self._validate_path(file_path, target_dir):
+                security_warning = f"Security: Skipping file outside target directory: {file_path}"
+                print(f"[SECURITY] {security_warning}")
+                log_experiment(
+                    agent_name="Orchestrator",
+                    model_used="SYSTEM",
+                    action=ActionType.DEBUG,
+                    details={
+                        "input_prompt": f"Validate file path: {file_path}",
+                        "output_response": security_warning,
+                        "file": file_path,
+                        "target_dir": target_dir
+                    },
+                    status="FAILURE"
+                )
+                continue
+            
             print(f"\n[File] Refactoring: {file_path}")
-            self.refactor_file(file_path)
+            self.refactor_file(file_path, target_dir)
         
         return {
             "status": "completed",
@@ -405,15 +500,35 @@ Focus on functionality that would make the generated tests pass.
             "results": self.results
         }
 
-    def refactor_file(self, file_path: str) -> Dict[str, Any]:
+    def refactor_file(self, file_path: str, target_dir: str = None) -> Dict[str, Any]:
         """Refactor a single Python file using state-based workflow.
         
         Args:
             file_path: Path to file to refactor
+            target_dir: Target directory (optional, for path validation)
             
         Returns:
             Refactoring results for this file
         """
+        # Validate file path if target_dir provided
+        if target_dir:
+            if not self._validate_path(file_path, target_dir):
+                security_error = f"Security: File is outside target directory: {file_path}"
+                print(f"[SECURITY] {security_error}")
+                log_experiment(
+                    agent_name="Orchestrator",
+                    model_used="SYSTEM",
+                    action=ActionType.DEBUG,
+                    details={
+                        "input_prompt": f"Validate file path: {file_path}",
+                        "output_response": security_error,
+                        "file": file_path,
+                        "target_dir": target_dir
+                    },
+                    status="FAILURE"
+                )
+                return {"status": "error", "error": security_error}
+        
         # Read original code
         try:
             original_code = read_file(file_path)

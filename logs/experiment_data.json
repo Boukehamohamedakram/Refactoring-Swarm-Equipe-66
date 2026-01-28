@@ -1493,5 +1493,195 @@
             "final_size": 206
         },
         "status": "SUCCESS"
+    },
+    {
+        "id": "e00b4bc0-59cc-43bb-b48b-eeff3e5882a8",
+        "timestamp": "2026-01-28T14:23:01.402940",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Target directory: sandbox/test",
+            "output_response": "Orchestrator started"
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "2e82a81b-9675-4c96-9904-c2f854d098ec",
+        "timestamp": "2026-01-28T14:23:01.454603",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "DEBUG",
+        "details": {
+            "input_prompt": "Validate target directory: sandbox/test",
+            "output_response": "Target directory validated: D:\\refactoring-swarm-template\\sandbox\\test",
+            "target_dir": "D:\\refactoring-swarm-template\\sandbox\\test"
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "eec62929-2633-43a3-aed5-de56a1f8e6e0",
+        "timestamp": "2026-01-28T14:23:01.504420",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Start refactoring file: sandbox/test\\buggy_code.py",
+            "output_response": "File size: 813 bytes",
+            "file": "sandbox/test\\buggy_code.py",
+            "original_size": 813
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "a80cdff4-64fa-410b-aa1e-95d377465559",
+        "timestamp": "2026-01-28T14:23:01.887391",
+        "agent": "Auditor",
+        "model": "gemma-3-4b-it",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "\nPlease analyze the following Python file: sandbox/test\\buggy_code.py\n\nCode:\n```python\n\"\"\"Test file with intentional code issues for testing the Tester agent.\"\"\"\n\n\ndef calculate_sum(numbers):\n    \"\"\"Calculate sum of numbers with missing validation.\"\"\"\n    total = 0\n    for num in numbers:\n        if num < 0:  # Potential issue: negative numbers\n            return None\n        total = total + num\n    return total\n\n\ndef divide_numbers(a, b):\n    \"\"\"Divide two numbers without zero check - MAJOR BUG.\"\"\"\n    return a / b\n\n\ndef process_list(items):\n    \"\"\"Process list with inefficient loop.\"\"\"\n    result = []\n    for i in range(len(items)):\n        result.append(items[i] * 2)\n    return result\n\n\ndef fetch_data(url, timeout=None):\n    \"\"\"Fetch data with unused parameter.\"\"\"\n    # Potential issue: timeout is never used\n    data = []\n    for i in range(10):\n        data.append(i)\n    return data\n\n```\n\nProvide a comprehensive analysis of issues, their severity, and recommendations.\n",
+            "output_response": "Mistral API call failed: Status: 400. Message: {\"object\":\"error\",\"message\":\"Invalid model: gemma-3-4b-it\",\"type\":\"invalid_model\",\"param\":null,\"code\":\"1500\"}",
+            "file": "sandbox/test\\buggy_code.py"
+        },
+        "status": "FAILURE"
+    },
+    {
+        "id": "ebee5d9a-d880-4c89-acb3-9aab839df736",
+        "timestamp": "2026-01-28T14:23:01.920450",
+        "agent": "Auditor",
+        "model": "mistral-large-latest",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Analyze buggy_code.py",
+            "output_response": "Found 0 issues",
+            "issues_count": 0
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "ea4c9bde-5d45-486a-bd60-3e2ae6dec8ce",
+        "timestamp": "2026-01-28T14:23:01.955138",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Completed refactoring buggy_code.py",
+            "output_response": "File improved - iterations: 1",
+            "file": "sandbox/test\\buggy_code.py",
+            "iterations": 1,
+            "final_size": 813
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "285ba472-943a-4c1d-866d-7c686fb8502d",
+        "timestamp": "2026-01-28T14:23:01.996382",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Start refactoring file: sandbox/test\\sample_code.py",
+            "output_response": "File size: 1253 bytes",
+            "file": "sandbox/test\\sample_code.py",
+            "original_size": 1253
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "8f5a8c01-b995-4907-bf00-e2ef7182bd28",
+        "timestamp": "2026-01-28T14:23:03.724591",
+        "agent": "Auditor",
+        "model": "gemma-3-4b-it",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "\nPlease analyze the following Python file: sandbox/test\\sample_code.py\n\nCode:\n```python\nfrom typing import List, Union\n\n\nclass DataProcessor:\n    \"\"\"A class for processing data.\n    \"\"\"\n\n    def __init__(self):\n        \"\"\"Initializes the DataProcessor with an empty list of data.\n        \"\"\"\n        self.data: List[Union[int, float]] = []\n\n    def process(self, x: Union[int, float]) -> Union[int, float]:\n        \"\"\"Processes a single data point.\n\n        Args:\n            x: The data point to process.\n        Returns:\n            The processed data point.\n        \"\"\"\n        if x > 0:\n            if x < 100:\n                if x % 2 == 0:\n                    return x * 2\n                else:\n                    return x * 3\n            else:\n                return x\n        else:\n            return 0  # Handle negative input\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ndef calculate_average(numbers: List[Union[int, float]]) -> float:\n    \"\"\"Calculates the average of a list of numbers.\n\n    Args:\n        numbers: A list of numbers.\n    Returns:\n        The average of the numbers.\n    \"\"\"\n    if not numbers:\n        return 0  # Handle empty list case\n    total = sum(numbers)\n    return total / len(numbers)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ndef old_style_function() -> int:\n    \"\"\"A simple function.\"\"\"\n    y: int = 5\n    z: int = 10\n    return y + z\n\n```\n\nProvide a comprehensive analysis of issues, their severity, and recommendations.\n",
+            "output_response": "Mistral API call failed: Status: 400. Message: {\"object\":\"error\",\"message\":\"Invalid model: gemma-3-4b-it\",\"type\":\"invalid_model\",\"param\":null,\"code\":\"1500\"}",
+            "file": "sandbox/test\\sample_code.py"
+        },
+        "status": "FAILURE"
+    },
+    {
+        "id": "ed25567f-1935-4164-92a5-bc14806e8375",
+        "timestamp": "2026-01-28T14:23:03.750682",
+        "agent": "Auditor",
+        "model": "mistral-large-latest",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Analyze sample_code.py",
+            "output_response": "Found 0 issues",
+            "issues_count": 0
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "f71c3964-7b66-4d67-8f13-e13327cddcc0",
+        "timestamp": "2026-01-28T14:23:03.796526",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Completed refactoring sample_code.py",
+            "output_response": "File improved - iterations: 1",
+            "file": "sandbox/test\\sample_code.py",
+            "iterations": 1,
+            "final_size": 1253
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "6d10f412-0f7b-429a-8b8b-f59336ada5e9",
+        "timestamp": "2026-01-28T14:23:03.837702",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Start refactoring file: sandbox/test\\test_sample.py",
+            "output_response": "File size: 206 bytes",
+            "file": "sandbox/test\\test_sample.py",
+            "original_size": 206
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "9d417ece-6bf8-434a-9b5a-e64661afbc22",
+        "timestamp": "2026-01-28T14:23:05.866819",
+        "agent": "Auditor",
+        "model": "gemma-3-4b-it",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "\nPlease analyze the following Python file: sandbox/test\\test_sample.py\n\nCode:\n```python\nfrom sandbox.utils import hello_world\n\n\ndef main() -> None:\n    \"\"\"Main execution block.\n    Prints the 'Hello from sandbox' message.\n    \"\"\"\n    print(hello_world()\n\n\nif __name__ == '__main__':\n    main()\n\n```\n\nProvide a comprehensive analysis of issues, their severity, and recommendations.\n",
+            "output_response": "Mistral API call failed: Status: 400. Message: {\"object\":\"error\",\"message\":\"Invalid model: gemma-3-4b-it\",\"type\":\"invalid_model\",\"param\":null,\"code\":\"1500\"}",
+            "file": "sandbox/test\\test_sample.py"
+        },
+        "status": "FAILURE"
+    },
+    {
+        "id": "e218969e-a573-4758-ad43-5bbe1ad2c9a5",
+        "timestamp": "2026-01-28T14:23:05.896956",
+        "agent": "Auditor",
+        "model": "mistral-large-latest",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Analyze test_sample.py",
+            "output_response": "Found 0 issues",
+            "issues_count": 0
+        },
+        "status": "SUCCESS"
+    },
+    {
+        "id": "65a9f595-64b8-4be2-b63f-997956cedda9",
+        "timestamp": "2026-01-28T14:23:05.927238",
+        "agent": "Orchestrator",
+        "model": "SYSTEM",
+        "action": "CODE_ANALYSIS",
+        "details": {
+            "input_prompt": "Completed refactoring test_sample.py",
+            "output_response": "File improved - iterations: 1",
+            "file": "sandbox/test\\test_sample.py",
+            "iterations": 1,
+            "final_size": 206
+        },
+        "status": "SUCCESS"
     }
 ]
