@@ -5,7 +5,7 @@ import subprocess
 import json
 from pathlib import Path
 from typing import List, Dict, Any
-
+import re
 
 def discover_python_files(target_dir: str) -> List[str]:
     """Discover all Python files in a directory.
@@ -115,3 +115,57 @@ def run_tests(test_dir: str = "tests") -> Dict[str, Any]:
             "stdout": "",
             "stderr": ""
         }
+
+def ensure_innit_existence(test_dir:str = "tests"):
+    """
+    Ensures that the __init_.py file exists in test_dir (if not it can causes error with pylint)
+    
+    :param test_dir: test_dir path
+    :type test_dir: str
+    """
+    init_file = os.path.join(test_dir, "__init__.py")
+
+    if not os.path.exists(init_file):
+        with open(init_file, "w") as f:
+            f.write("") 
+
+def run_pylint_test(test_dir:str = "tests") -> Dict[str,Any]:
+    """Run pylint on a directory.
+    
+    Args:
+        test_dir: Directory containing tests
+        
+    Returns:
+        Dictionary with test results"""
+    
+    ensure_innit_existence(test_dir)
+    
+    command = [
+        "pylint",
+        test_dir,
+        "--output-format=json",
+        "--reports=y",
+        "--score=y"
+    ]
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True
+    )
+
+    stdout = result.stdout
+    stderr = result.stderr
+
+    json_part = stdout.split("\n", 1)[0]
+    issues = json.loads(json_part) if json_part.strip() else []
+
+    score_match = re.search(r"rated at ([0-9\.]+)/10", stdout)
+    score = float(score_match.group(1)) if score_match else None
+
+    return {
+        "score": score,
+        "issues": issues,
+        "exit_code": result.returncode,
+        "stderr": stderr
+    }
