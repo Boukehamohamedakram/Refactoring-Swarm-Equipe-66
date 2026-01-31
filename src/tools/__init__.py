@@ -116,36 +116,24 @@ def run_tests(test_dir: str = "tests") -> Dict[str, Any]:
             "stderr": ""
         }
 
-def ensure_innit_existence(test_dir:str = "tests"):
+def run_pylint_test(file_path:str) -> Dict[str,Any]:
     """
-    Ensures that the __init_.py file exists in test_dir (if not it can causes error with pylint)
-    
-    :param test_dir: test_dir path
-    :type test_dir: str
-    """
-    init_file = os.path.join(test_dir, "__init__.py")
+    Runs pylint on a file
 
-    if not os.path.exists(init_file):
-        with open(init_file, "w") as f:
-            f.write("") 
-
-def run_pylint_test(test_dir:str = "tests") -> Dict[str,Any]:
-    """Run pylint on a directory.
-    
     Args:
-        test_dir: Directory containing tests
+        file_path: path of the file
         
     Returns:
-        Dictionary with test results"""
-    
-    ensure_innit_existence(test_dir)
-    
+        Dictionary with score,issues,exit code, stderr
+    """
+
+    file_path = str(Path(file_path).resolve())
+
     command = [
         "pylint",
-        test_dir,
+        file_path,
         "--output-format=json",
-        "--reports=y",
-        "--score=y"
+        "--score=y",
     ]
 
     result = subprocess.run(
@@ -154,18 +142,47 @@ def run_pylint_test(test_dir:str = "tests") -> Dict[str,Any]:
         text=True
     )
 
-    stdout = result.stdout
-    stderr = result.stderr
+    try:
+        issues = json.loads(result.stdout) if result.stdout.strip() else []
+    except json.JSONDecodeError:
+        issues = []
 
-    json_part = stdout.split("\n", 1)[0]
-    issues = json.loads(json_part) if json_part.strip() else []
-
-    score_match = re.search(r"rated at ([0-9\.]+)/10", stdout)
-    score = float(score_match.group(1)) if score_match else None
+    score = get_pylint_score(file_path)
 
     return {
         "score": score,
         "issues": issues,
         "exit_code": result.returncode,
-        "stderr": stderr
+        "stderr": result.stderr,
     }
+
+def get_pylint_score(file_path: str) -> float | None:
+    """
+    Runs pylint on a single file and returns the numeric score (0-10),
+    or None if pylint fails to compute a score (e.g., syntax error).
+    and beacuase the first one doesnt give the score directly 
+
+    Args:
+        file_path: path of the file
+        
+    Returns:
+        score or None
+    """
+    command = [
+        "pylint",
+        file_path,
+        "--score=y",
+        "--reports=n"
+    ]
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True
+    )
+
+    match = re.search(r"rated at ([0-9.]+)/10", result.stdout)
+    if match:
+        return float(match.group(1))
+
+    return None
