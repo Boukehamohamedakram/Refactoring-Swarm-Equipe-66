@@ -17,7 +17,9 @@ from src.tools import (
     read_file,
     write_file,
     validate_syntax,
-    run_tests
+    run_tests,
+    change_file_path,
+    check_file_in_sandbox
 )
 from src.utils.logger import log_experiment, ActionType
 
@@ -128,7 +130,7 @@ class Orchestrator:
         Returns:
             True if tests pass, False otherwise
         """
-        test_result = run_tests("tests" if os.path.exists("tests") else "sandbox/test")
+        test_result = run_tests("tests" if os.path.exists("tests") else "sandbox/unit_tests")
         return test_result.get("passed", False)
 
     # State machine node functions
@@ -249,7 +251,9 @@ class Orchestrator:
         print(f"[{state['iteration']}] Writing changes...")
         
         try:
-            write_file(state["file_path"], state["refactored_code"])
+            if not check_file_in_sandbox(state["file_path"]):
+                writing_path = change_file_path(state["file_path"])
+            write_file(writing_path, state["refactored_code"])
             state["current_code"] = state["refactored_code"]
             state["file_improved"] = True
             
@@ -308,6 +312,11 @@ class Orchestrator:
         
         state["test_code"] = test_result.get("test_code", "")
         test_count = test_result.get("test_count", 0)
+        
+        # write in the unit_test folder inside sandbox
+        testing_file = change_file_path(state["file_path"],"sandbox/unit_tests")
+        with open(testing_file,"w") as f :
+            f.write(state["test_code"])
         
         log_experiment(
             agent_name="Tester",
