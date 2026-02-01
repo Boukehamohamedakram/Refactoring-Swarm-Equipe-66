@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Any, TypedDict
-
+import tempfile
 # Add the parent directory (project root) to sys.path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -122,13 +122,17 @@ class Orchestrator:
         )
         return judgment
 
-    def _run_and_check_tests(self) -> bool:
+    def _run_and_check_tests(self, state: RefactoringState) -> bool:
         """Run tests and check if they pass.
         
         Returns:
             True if tests pass, False otherwise
         """
-        test_result = run_tests("tests" if os.path.exists("tests") else "sandbox/test")
+        with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as tmp:
+             tmp.write(state["test_code"])
+             tmp_path = tmp.name
+        test_result = run_tests(tmp_path)
+        os.remove(tmp_path)
         return test_result.get("passed", False)
 
     # State machine node functions
@@ -274,7 +278,7 @@ class Orchestrator:
         """State node: Run tests on refactored code."""
         print(f"[{state['iteration']}] Running tests...")
         
-        tests_passed = self._run_and_check_tests()
+        tests_passed = self._run_and_check_tests(state)
         state["tests_passed"] = tests_passed
         
         log_experiment(
