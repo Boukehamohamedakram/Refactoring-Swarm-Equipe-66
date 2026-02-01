@@ -334,7 +334,7 @@ class Orchestrator:
         # Tests failed - initiate feedback loop
         state["feedback_loop_count"] = state.get("feedback_loop_count", 0) + 1
         
-        if state["feedback_loop_count"] > 10:
+        if state["feedback_loop_count"] > self.max_iterations:
             print(f"[INFO] Feedback loop limit reached ({state['feedback_loop_count']} attempts)")
             return state
         
