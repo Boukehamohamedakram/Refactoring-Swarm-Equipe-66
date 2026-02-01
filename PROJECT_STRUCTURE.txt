@@ -1,0 +1,321 @@
+"""
+COMPLETE PROJECT RECONSTRUCTION: Refactoring Swarm – Equipe 66
+
+This document provides a reference of the complete project structure exactly as it was designed.
+"""
+
+# REPOSITORY TREE
+# ===============
+
+refactoring-swarm-template/
+├── .env                                    # API credentials (not in git)
+├── .env.example                            # Template for .env
+├── .git/                                   # Git repository
+├── .gitignore                              # Git ignore rules
+├── .pytest_cache/                          # Pytest cache
+├── README.md                               # Comprehensive project documentation
+├── main.py                                 # Entry point - orchestrates the system
+├── requirements.txt                        # Python dependencies
+├── check_setup.py                          # Setup validation script
+│
+├── src/                                    # Source code directory
+│   ├── __init__.py                         # Package initialization
+│   ├── orchestrator.py                     # Main orchestration engine
+│   │
+│   ├── agents/                             # Agent implementations
+│   │   ├── __init__.py                     # Exports: Auditor, Fixer, Judge
+│   │   ├── base_agent.py                   # Base class for all agents
+│   │   │                                   # Features: API communication, caching,
+│   │   │                                   # throttling, retry logic, logging
+│   │   ├── auditor.py                      # Code analysis agent
+│   │   ├── fixer.py                        # Code refactoring agent
+│   │   └── judge.py                        # Code validation agent
+│   │
+│   ├── prompts/                            # System prompts for agents
+│   │   ├── auditor_prompt.txt              # Instructions for code analysis
+│   │   ├── fixer_prompt.txt                # Instructions for code refactoring
+│   │   └── judge_prompt.txt                # Instructions for code validation
+│   │
+│   ├── tools/                              # Utility functions
+│   │   └── __init__.py                     # File I/O, syntax validation, test running
+│   │
+│   ├── utils/                              # Utility modules
+│   │   └── logger.py                       # Structured JSON logging system
+│   │
+│   └── __pycache__/                        # Python bytecode cache
+│
+├── sandbox/                                # Test directory
+│   └── test/
+│       ├── test_sample.py                  # Sample test file
+│       └── sample_code.py                  # Sample code to refactor
+│
+├── logs/                                   # Logging directory
+│   ├── experiment_data.json                # All agent interactions (JSON)
+│   └── api_response_cache.json             # API response cache
+│
+└── venv/                                   # Python virtual environment
+    ├── Scripts/                            # Executables (Windows)
+    │   ├── python.exe
+    │   ├── pip.exe
+    │   └── ...
+    ├── Lib/                                # Installed packages
+    └── ...
+
+
+# KEY FILES CONTENT SUMMARY
+# ==========================
+
+1. MAIN ENTRY POINT (main.py)
+   - Parses command-line arguments (--target_dir)
+   - Validates target directory exists
+   - Initializes Orchestrator
+   - Calls orchestrator.refactor_directory()
+   - Logs startup to experiment_data.json
+
+2. ORCHESTRATOR (src/orchestrator.py)
+   - Discovers all Python files in target directory
+   - For each file, runs max 10 iterations of:
+     a) Auditor.analyze() → get issues list
+     b) Fixer.fix() → apply fixes → refactored code
+     c) Judge.validate() → check quality → verdict
+     d) validate_syntax() → ensure refactored code is valid
+     e) run_tests() → execute pytest
+   - Stops when:
+     - Auditor finds no issues
+     - Judge gives APPROVED verdict and tests pass
+     - Max iterations reached
+   - Stores results in self.results dict
+
+3. AUDITOR AGENT (src/agents/auditor.py)
+   - Extends BaseAgent
+   - analyze(file_path, code) → Dict with issues
+   - Uses auditor_prompt.txt as system instructions
+   - Returns JSON with:
+     - file
+     - total_issues
+     - issues[] (with severity, type, description, line, snippet, recommendation)
+     - overall_quality_score (0-100)
+
+4. FIXER AGENT (src/agents/fixer.py)
+   - Extends BaseAgent
+   - fix(file_path, code, issues) → Dict with refactored code
+   - Uses fixer_prompt.txt as system instructions
+   - Returns JSON with:
+     - file
+     - refactored_code (complete Python code)
+     - changes[] (detailed list of each change)
+     - summary (overall summary of changes)
+
+5. JUDGE AGENT (src/agents/judge.py)
+   - Extends BaseAgent
+   - validate(file_path, original_code, refactored_code, changes_summary) → Dict
+   - Uses judge_prompt.txt as system instructions
+   - Returns JSON with:
+     - file
+     - verdict (APPROVED | NEEDS_REVISION | REJECTED)
+     - quality_improvement_score (-100 to +100)
+     - issues_fixed (number)
+     - new_issues_introduced (number)
+     - feedback (detailed explanation)
+     - suggestions[] (if NEEDS_REVISION)
+
+6. BASE AGENT (src/agents/base_agent.py)
+   - Abstract base class for all agents
+   - Features:
+     * call_gemini_api(user_message) → API response
+     * Response caching by content hash → logs/api_response_cache.json
+     * Request throttling (2s between calls)
+     * Retry logic with exponential backoff (5s → 10s → 20s → 60s)
+     * Quota exceeded (429) detection and handling
+     * JSON parsing with fallback
+     * Structured logging via log_experiment()
+   - All agents inherit from BaseAgent
+
+7. LOGGING SYSTEM (src/utils/logger.py)
+   - Structured JSON logging
+   - ActionType enum (ANALYSIS, GENERATION, DEBUG, FIX)
+   - log_experiment() function
+   - Validates input (requires input_prompt and output_response)
+   - Appends to logs/experiment_data.json
+   - Each entry has: id, timestamp, agent, model, action, details, status
+
+8. TOOLS MODULE (src/tools/__init__.py)
+   - discover_python_files(target_dir) → List[str] of file paths
+   - read_file(file_path) → str
+   - write_file(file_path, content) → None
+   - validate_syntax(code, file_path) → Dict[valid, errors]
+   - run_tests(test_dir) → Dict[passed, stdout, stderr]
+
+9. SYSTEM PROMPTS (src/prompts/*.txt)
+   All are plain text files with detailed instructions:
+   
+   a) auditor_prompt.txt
+      - Instructions for analyzing Python code
+      - Severity levels: LOW, MEDIUM, HIGH
+      - Issue types: Code Quality, Performance, Security, Maintainability, Type Safety
+      - Expected JSON output structure
+   
+   b) fixer_prompt.txt
+      - Instructions for refactoring code
+      - Guidelines: preserve functionality, add type hints, add docstrings
+      - Expected JSON output with refactored_code, changes, summary
+   
+   c) judge_prompt.txt
+      - Instructions for validating refactored code
+      - Evaluation criteria: functionality, issues fixed, new issues, readability
+      - Verdicts: APPROVED, NEEDS_REVISION, REJECTED
+
+10. ENVIRONMENT (.env)
+    - GOOGLE_API_KEY=<your-api-key>
+    - Loaded by load_dotenv() in base_agent.py
+    - Template provided in .env.example
+
+
+# WORKFLOW DIAGRAM
+# ================
+
+main.py (CLI entry)
+    ↓
+Orchestrator.__init__()
+    ├─ Initialize Auditor agent
+    ├─ Initialize Fixer agent
+    └─ Initialize Judge agent
+    ↓
+Orchestrator.refactor_directory(target_dir)
+    ↓
+discover_python_files(target_dir) → [file1.py, file2.py, ...]
+    ↓
+FOR EACH FILE:
+    ├─ Orchestrator.refactor_file(file_path)
+    │
+    └─ ITERATION LOOP (max 10):
+         │
+         ├─ 1. AUDITOR PHASE
+         │    └─ Auditor.analyze(file_path, code)
+         │       └─ call_gemini_api() [model: gemma-3-4b-it]
+         │           ├─ Check cache → [CACHE HIT]
+         │           └─ If miss → API call → [CACHE STORE]
+         │       └─ Parse JSON response
+         │       └─ log_interaction(ActionType.ANALYSIS, ...)
+         │       └─ Return: {file, total_issues, issues[], quality_score}
+         │
+         ├─ Check: issues found?
+         │    ├─ No issues → SUCCESS (exit loop)
+         │    └─ Has issues → Continue
+         │
+         ├─ 2. FIXER PHASE
+         │    └─ Fixer.fix(file_path, code, issues)
+         │       └─ call_gemini_api() [model: gemma-3-4b-it]
+         │       └─ Parse JSON response
+         │       └─ log_interaction(ActionType.FIX, ...)
+         │       └─ Return: {file, refactored_code, changes[], summary}
+         │
+         ├─ validate_syntax(refactored_code)
+         │    ├─ Invalid → log error, exit loop
+         │    └─ Valid → Continue
+         │
+         ├─ 3. JUDGE PHASE
+         │    └─ Judge.validate(file_path, original, refactored, changes)
+         │       └─ call_gemini_api() [model: gemma-3-4b-it]
+         │       └─ Parse JSON response
+         │       └─ log_interaction(ActionType.ANALYSIS, ...)
+         │       └─ Return: {file, verdict, quality_score, feedback}
+         │
+         ├─ Check verdict:
+         │    ├─ APPROVED → continue to testing
+         │    ├─ NEEDS_REVISION → log feedback, exit loop
+         │    └─ REJECTED → log feedback, exit loop
+         │
+         ├─ 4. WRITE REFACTORED CODE
+         │    └─ write_file(file_path, refactored_code)
+         │
+         ├─ 5. TEST PHASE
+         │    └─ run_tests() → pytest
+         │       ├─ Tests pass → SUCCESS (exit loop)
+         │       └─ Tests fail → Continue iteration
+         │
+         └─ Next iteration (if < max_iterations)
+
+
+# AGENT COMMUNICATION PROTOCOL
+# ==============================
+
+All agents use Google Gemini API via google.genai Client:
+
+REQUEST:
+├─ Model: "gemma-3-4b-it" (or "gemini-2.5-flash")
+├─ System Prompt: Loaded from src/prompts/<agent>_prompt.txt
+└─ User Message: File path + code + specific task
+
+RESPONSE:
+├─ Expected: JSON object
+├─ Fallback: Extract JSON from text response
+└─ Error: Return error structure
+
+CACHING:
+├─ Key: MD5(model + system_prompt + user_message)
+├─ Storage: logs/api_response_cache.json
+└─ Hit rate: Reduces API calls significantly
+
+RATE LIMITING:
+├─ Throttle: 2 seconds between API calls
+├─ Retry: Exponential backoff on 429 errors
+└─ Max backoff: 60 seconds
+
+
+# CONFIGURATION
+# ==============
+
+DEFAULT SETTINGS (modifiable):
+
+Models:
+  - Auditor: gemma-3-4b-it
+  - Fixer: gemma-3-4b-it
+  - Judge: gemma-3-4b-it
+
+Rate Limiting (src/agents/base_agent.py):
+  - MAX_RETRIES: 3
+  - INITIAL_BACKOFF: 5 seconds
+  - MAX_BACKOFF: 60 seconds
+  - REQUEST_THROTTLE_DELAY: 2 seconds
+
+Orchestrator (src/orchestrator.py):
+  - max_iterations: 10 per file
+
+Caching:
+  - Enabled by default
+  - File: logs/api_response_cache.json
+  - Keyed by: model + prompt + content hash
+
+
+# DEPENDENCIES (requirements.txt)
+# ===============================
+
+google-genai==1.56.0          # Google Gemini client (NEW)
+google-generativeai==0.8.6    # Google Gemini (legacy support)
+langchain==0.1.10             # LLM framework
+langchain-google-genai==0.0.9 # LangChain Google integration
+langgraph==0.0.25             # Graph-based orchestration
+pylint==3.0.3                 # Code linting
+pytest==7.4.4                 # Test framework
+python-dotenv==1.0.1          # Environment variable loading
+pandas==2.2.0                 # Data processing
+colorama==0.4.6               # Colored terminal output
+
+
+# RECONSTRUCTION COMPLETE
+# =======================
+
+This project has been reconstructed from conversation history with full:
+✅ Architecture preserved
+✅ All agent implementations
+✅ Caching and retry logic
+✅ System prompts
+✅ Logging infrastructure
+✅ Tool utilities
+✅ Error handling
+✅ Documentation
+
+The system is ready to use with:
+python main.py --target_dir <path-to-python-files>
+"""

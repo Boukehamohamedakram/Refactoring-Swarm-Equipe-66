@@ -33,6 +33,7 @@ class Calculator:
         }
 
 class DataProcessor:
+    
     def process(self, data):
         calc = Calculator()
         results = []
