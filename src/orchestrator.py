@@ -17,7 +17,8 @@ from src.tools import (
     read_file,
     write_file,
     validate_syntax,
-    run_tests
+    run_tests,
+    get_pylint_score
 )
 from src.utils.logger import log_experiment, ActionType
 
@@ -330,13 +331,10 @@ class Orchestrator:
 
     def _node_feedback_loop(self, state: RefactoringState) -> RefactoringState:
         """State node: Implement feedback loop for test failures."""
-        if state.get("tests_passed"):
-            return state
-        
         # Tests failed - initiate feedback loop
         state["feedback_loop_count"] = state.get("feedback_loop_count", 0) + 1
         
-        if state["feedback_loop_count"] > 2:
+        if state["feedback_loop_count"] > 10:
             print(f"[INFO] Feedback loop limit reached ({state['feedback_loop_count']} attempts)")
             return state
         
@@ -496,7 +494,10 @@ Focus on functionality that would make the generated tests pass.
                 continue
             
             print(f"\n[File] Refactoring: {file_path}")
+            beforeScore = get_pylint_score(file_path)
             self.refactor_file(file_path, target_dir)
+            afterScore = get_pylint_score(file_path)
+            print(f"[Pylint] Score before: {beforeScore}, after: {afterScore}")
         
         return {
             "status": "completed",
@@ -613,7 +614,9 @@ Focus on functionality that would make the generated tests pass.
             print(f"[{state['iteration']}] Judge verdict: {state['verdict']}")
             
             if state["verdict"] != "APPROVED":
-                break
+                state = self._node_feedback_loop(state)
+                # Continue to next iteration to retry with feedback
+                continue
             
             # Step 5: Write changes
             state = self._node_write_changes(state)
