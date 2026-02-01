@@ -9,7 +9,7 @@ from src.utils.logger import ActionType
 class Auditor(BaseAgent):
     """Agent responsible for analyzing code and identifying issues."""
 
-    def __init__(self, model: str = "gemma-3-4b-it"):
+    def __init__(self, model: str = "mistral-large-latest"):
         """Initialize the auditor agent.
         
         Args:

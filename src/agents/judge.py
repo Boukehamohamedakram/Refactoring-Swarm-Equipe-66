@@ -9,7 +9,7 @@ from src.utils.logger import ActionType
 class Judge(BaseAgent):
     """Agent responsible for validating refactored code quality."""
 
-    def __init__(self, model: str = "gemma-3-4b-it"):
+    def __init__(self, model: str = "mistral-large-latest"):
         """Initialize the judge agent.
         
         Args:

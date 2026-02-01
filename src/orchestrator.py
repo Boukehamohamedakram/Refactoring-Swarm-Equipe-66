@@ -615,13 +615,14 @@ Focus on functionality that would make the generated tests pass.
             state = self._node_write_changes(state)
             print(f"[{state['iteration']}] Changes written")
             
+            # Step 7: Generate unit tests
+            state = self._node_generate_tests(state)
+            
             # Step 6: Run tests
             state = self._node_run_tests(state)
             print(f"[{state['iteration']}] Tests: {'PASSED' if state['tests_passed'] else 'FAILED'}")
             
-            # Step 7: Generate unit tests
-            state = self._node_generate_tests(state)
-            
+
             # Step 8: Feedback loop for test failures
             if not state["tests_passed"]:
                 state = self._node_feedback_loop(state)

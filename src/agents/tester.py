@@ -72,12 +72,13 @@ Format your response as JSON with the following structure:
         try:
             response = self.call_mistral_api(user_message)
             result = self._parse_json_response(response)
-            
             # Log the interaction
             self.log_interaction(
                 action=ActionType.GENERATION,
-                prompt=user_message,
-                response=response,
+                details={
+                    "input_prompt": user_message,
+                    "output_response": response,
+                },
                 status="SUCCESS" if result else "FAILURE"
             )
             
@@ -86,8 +87,10 @@ Format your response as JSON with the following structure:
             error_msg = str(e)
             self.log_interaction(
                 action=ActionType.DEBUG,
-                prompt=user_message,
-                response=error_msg,
+                details={
+                    "input_prompt": user_message,
+                    "output_response": error_msg,
+                },
                 status="FAILURE"
             )
             return {

@@ -9,7 +9,7 @@ from src.utils.logger import ActionType
 class Fixer(BaseAgent):
     """Agent responsible for fixing code issues."""
 
-    def __init__(self, model: str = "gemma-3-4b-it"):
+    def __init__(self, model: str = "mistral-large-latest"):
         """Initialize the fixer agent.
         
         Args:
