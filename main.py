@@ -48,7 +48,7 @@ def main():
 
     # Run orchestrator
     try:
-        orchestrator = Orchestrator(max_iterations=10)
+        orchestrator = Orchestrator(max_iterations=2)
         results = orchestrator.refactor_directory(args.target_dir)
         
         print(f"\n[RESULTS] Orchestration started for {args.target_dir}")
