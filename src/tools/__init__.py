@@ -186,27 +186,3 @@ def get_pylint_score(file_path: str) -> float | None:
         return float(match.group(1))
 
     return None
-
-def change_file_path(file_path: str,target_dir: str="sandbox") -> str:
-    
-    """
-   change the file path so it will be in the target_dir
-    """
-    sandbox_dir = Path.cwd() / target_dir
-    
-    # check if the sandbox is a directory
-    sandbox_dir.mkdir(parents=True,exist_ok=True)
-    
-    file_path = sandbox_dir / Path(file_path).name
-    
-    return file_path
-
-def check_file_in_sandbox(file_path: str) -> bool:
-    """check if a file is directly inside the sandbox folder"""
-    
-    sandbox_dir = Path("./sandbox").resolve()
-    path = Path(file_path).resolve()
-
-    if path.parent == sandbox_dir:
-        return True
-    return False

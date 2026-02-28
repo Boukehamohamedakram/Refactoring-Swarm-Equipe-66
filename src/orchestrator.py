@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Any, TypedDict
-
+import tempfile
 # Add the parent directory (project root) to sys.path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -18,8 +18,7 @@ from src.tools import (
     write_file,
     validate_syntax,
     run_tests,
-    change_file_path,
-    check_file_in_sandbox
+    get_pylint_score
 )
 from src.utils.logger import log_experiment, ActionType
 
@@ -124,13 +123,17 @@ class Orchestrator:
         )
         return judgment
 
-    def _run_and_check_tests(self) -> bool:
+    def _run_and_check_tests(self, state: RefactoringState) -> bool:
         """Run tests and check if they pass.
         
         Returns:
             True if tests pass, False otherwise
         """
-        test_result = run_tests("tests" if os.path.exists("tests") else "sandbox/unit_tests")
+        with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as tmp:
+             tmp.write(state["test_code"])
+             tmp_path = tmp.name
+        test_result = run_tests(tmp_path)
+        os.remove(tmp_path)
         return test_result.get("passed", False)
 
     # State machine node functions
@@ -251,9 +254,7 @@ class Orchestrator:
         print(f"[{state['iteration']}] Writing changes...")
         
         try:
-            if not check_file_in_sandbox(state["file_path"]):
-                writing_path = change_file_path(state["file_path"])
-            write_file(writing_path, state["refactored_code"])
+            write_file(state["file_path"], state["refactored_code"])
             state["current_code"] = state["refactored_code"]
             state["file_improved"] = True
             
@@ -278,7 +279,7 @@ class Orchestrator:
         """State node: Run tests on refactored code."""
         print(f"[{state['iteration']}] Running tests...")
         
-        tests_passed = self._run_and_check_tests()
+        tests_passed = self._run_and_check_tests(state)
         state["tests_passed"] = tests_passed
         
         log_experiment(
@@ -313,11 +314,6 @@ class Orchestrator:
         state["test_code"] = test_result.get("test_code", "")
         test_count = test_result.get("test_count", 0)
         
-        # write in the unit_test folder inside sandbox
-        testing_file = change_file_path(state["file_path"],"sandbox/unit_tests")
-        with open(testing_file,"w") as f :
-            f.write(state["test_code"])
-        
         log_experiment(
             agent_name="Tester",
             model_used="mistral-large-latest",
@@ -335,13 +331,10 @@ class Orchestrator:
 
     def _node_feedback_loop(self, state: RefactoringState) -> RefactoringState:
         """State node: Implement feedback loop for test failures."""
-        if state.get("tests_passed"):
-            return state
-        
         # Tests failed - initiate feedback loop
         state["feedback_loop_count"] = state.get("feedback_loop_count", 0) + 1
         
-        if state["feedback_loop_count"] > 2:
+        if state["feedback_loop_count"] > self.max_iterations:
             print(f"[INFO] Feedback loop limit reached ({state['feedback_loop_count']} attempts)")
             return state
         
@@ -501,7 +494,10 @@ Focus on functionality that would make the generated tests pass.
                 continue
             
             print(f"\n[File] Refactoring: {file_path}")
+            beforeScore = get_pylint_score(file_path)
             self.refactor_file(file_path, target_dir)
+            afterScore = get_pylint_score(file_path)
+            print(f"[Pylint] Score before: {beforeScore}, after: {afterScore}")
         
         return {
             "status": "completed",
@@ -618,7 +614,9 @@ Focus on functionality that would make the generated tests pass.
             print(f"[{state['iteration']}] Judge verdict: {state['verdict']}")
             
             if state["verdict"] != "APPROVED":
-                break
+                state = self._node_feedback_loop(state)
+                # Continue to next iteration to retry with feedback
+                continue
             
             # Step 5: Write changes
             state = self._node_write_changes(state)
